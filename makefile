@@ -6,6 +6,7 @@ output_exe ='./nyanpass'
 
 classes=\
 	nyanpass.cs\
+	interpreter.cs\
 
 release:
 	@echo 'building...'
