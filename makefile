@@ -2,10 +2,10 @@
 # make me !
 
 csc=gmcs
-output_exe ='./mewmew'
+output_exe ='./nyanpass'
 
 classes=\
-	mewmew.cs\
+	nyanpass.cs\
 
 release:
 	@echo 'building...'
