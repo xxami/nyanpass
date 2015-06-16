@@ -1,14 +1,14 @@
 
 # make me !
 
-csc=gmcs
-output_exe ='./nyanpass'
+csc=mcs
+bin=./nyanpass
 
 classes=\
 	nyanpass.cs\
 	interpreter.cs\
 
-release:
-	@echo 'building...'
-	@$(csc) $(classes) /out:$(output_exe) /t:exe
-	@echo 'done ($(output_exe))'
+all: $(bin)
+
+$(bin): $(classes)
+	$(csc) $(classes) /out:$(bin) /t:exe

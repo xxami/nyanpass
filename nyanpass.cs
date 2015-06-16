@@ -50,6 +50,7 @@ namespace NyanPass {
 		}
 
 		public static void Compile(string input_file) {
+			Console.WriteLine(@"compiling " + input_file + @"...");
 			var interp = new Interpreter(input_file);
 		}
 
