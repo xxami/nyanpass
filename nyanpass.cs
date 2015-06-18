@@ -6,8 +6,15 @@ namespace NyanPass {
 
 	class Program {
 
+		/**
+		 * command line flag configuration
+		 */
 		public static bool use_transitional_syntax = false;
+		public static bool quiet_mode_enabled = false;
 
+		/**
+		 * parse flags and input and start compilation if needed
+		 */
 		public static void Main(string[] args) {
 
 			int len = args.Length;
@@ -18,12 +25,12 @@ namespace NyanPass {
 			}
 
 			/**
-			 * params include program switches
+			 * process flags
 			 */
-			else if (len > 3) {
+			else if (len > 2) {
 
-				for (int i = 2; (i + 1) < len; i += 2) {
-
+				for (int i = 2; i < len; i++) {
+					
 					switch (args[i]) {
 
 						/**
@@ -31,6 +38,10 @@ namespace NyanPass {
 						 */
 						case "--syntax":
 							
+							if (i+1 >= len) {
+								break;
+							}
+
 							switch (args[i+1]) {
 
 								/**
@@ -38,6 +49,7 @@ namespace NyanPass {
 								 */
 								case "legacy":
 									Program.use_transitional_syntax = false;
+									i++;
 									break;
 
 								/**
@@ -47,12 +59,20 @@ namespace NyanPass {
 								case "trans":
 								case "v1.7":
 									Program.use_transitional_syntax = true;
+									i++;
 									break;
 
 								default: break;
 
 							}
-							
+
+							break;
+
+						/**
+						 * do not print to stdout when quiet flag is enabled
+						 */
+						case "--quiet":
+							Program.quiet_mode_enabled = true;
 							break;
 
 						default: break;
@@ -63,6 +83,9 @@ namespace NyanPass {
 
 			string input_file;
 
+			/**
+			 * process commands
+			 */
 			switch (args[0]) {
 
 				/**
@@ -70,11 +93,11 @@ namespace NyanPass {
 				 * sourcepawn compiler, and trace any errors back
 				 */
 				case "compile":
-					Console.WriteLine("compile");
+					Util.LogMessage("compile");
 					input_file = args[1];
 					if (File.Exists(input_file)) 
 						Program.Compile(input_file);
-					else Console.WriteLine(@"error: input file not found");
+					else Util.LogError("error: input file not found");
 					break;
 
 				/**
@@ -84,7 +107,7 @@ namespace NyanPass {
 					input_file = args[1];
 					if (File.Exists(input_file))
 						Program.Compile(input_file);
-					else Console.WriteLine(@"error: input file not found");
+					else Util.LogError("error: input file not found");
 					break;
 
 				/**
@@ -106,7 +129,7 @@ namespace NyanPass {
 					return;
 			}
 
-			Console.WriteLine("finished... meow :)");
+			Util.LogMessage("finished... meow :)");
 
 		}
 
@@ -114,21 +137,24 @@ namespace NyanPass {
 		 * actually display help, version, syntax, etc.
 		 */
 		public static void DisplaySyntax() {
-			Console.WriteLine("syntax: nyanpass compile | source \"file.nyan\"" + 
-				" --flag value\n\nflags:\n    --syntax\n        legacy\t\t\t\t" +
+			Util.LogMessage("syntax: nyanpass compile | source \"file.nyan\"" + 
+				" --flag value\n\nflags:\n");
+			Util.LogMessage("    --syntax\n        legacy\t\t\t\t" +
 				"generate sourcepawn legacy syntax\n        transitional, " +
-				"trans, v1.7\tgenerate sourcepawn transitional syntax\n\n" +
-				"find out more: https://github.com/xxami/nyanpass/");
+				"trans, v1.7\tgenerate sourcepawn transitional syntax\n");
+			Util.LogMessage("    --quiet\t\t\t\tdisable stdout messages/logging\n");
+			Util.LogMessage("find out more: https://github.com/xxami/nyanpass/");
 		}
 
 		/**
 		 * initialize compiler
 		 */
 		public static void Compile(string input_file) {
-			Console.WriteLine("using " + ((Program.use_transitional_syntax) ?
+			Util.LogMessage("using " + ((Program.use_transitional_syntax) ?
 				"transitional syntax..." : "legacy syntax..."));
-			Console.WriteLine("compiling " + input_file + "...");
-			var interp = new Interpreter(input_file);
+			Util.LogMessage("compiling " + input_file + "...");
+
+			new Interpreter(input_file);
 		}
 
 	}

@@ -7,6 +7,7 @@ bin=./nyanpass
 classes=\
 	nyanpass.cs\
 	interpreter.cs\
+	util.cs\
 
 all: $(bin)
 
