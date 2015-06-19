@@ -154,7 +154,7 @@ namespace NyanPass {
 				"transitional syntax..." : "legacy syntax..."));
 			Util.LogMessage("compiling " + input_file + "...");
 
-			new Interpreter(input_file);
+			new Parser(input_file);
 		}
 
 	}
