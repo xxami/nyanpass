@@ -1,7 +1,12 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
+using System.Text;
+
+/**
+ * disable "possible mistaken empty statement"
+ */
+#pragma warning disable 642
 
 namespace NyanPass {
 
@@ -23,15 +28,31 @@ namespace NyanPass {
 	 */
 	class Parser {
 
+		public interface IParseable {
+
+			/**
+			 * accept Parser.ParseLine input, figure out in
+			 * the shortest time whether it's needed to parse further
+			 * return true to indicate that other parsers need not be called
+			 */
+			bool ShouldConsume(string line, int i, char c);
+		}
+
 		/**
 		 * parse a multi-line comment to provide support for
 		 * defining plugin information in comments using the
 		 * @property value syntax
 		 */
-		class MultilineComment {
+		public class MultilineCommentParser : IParseable {
 
-			private string prop_key = "";
-			private string prop_value = "";
+			private StringBuilder prop_key;
+			private StringBuilder prop_value;
+
+			/**
+			 * reference given in constructor to Parser.plugin_info
+			 */
+			private PluginInfo plugin_info;
+
 			private char prev_c = '\0';
 
 			private bool in_key = false;
@@ -47,27 +68,42 @@ namespace NyanPass {
 			 */
 			public bool has_property = false;
 
-			public MultilineComment() {
-				this.closed = false;
+			public MultilineCommentParser(PluginInfo plugin_info) {
+				this.plugin_info = plugin_info;
+				this.prop_key = new StringBuilder();
+				this.prop_value = new StringBuilder();
 			}
 
 			/**
-			 * parse multiline comment char by char
+			 * parser for multi-line comments
+			 * return true when in a multiline comments
 			 */
-			public void ParseChar(char c) {
+			public bool ShouldConsume(string line, int i, char c) {
+				if (this.closed) {
+					if (this.prev_c == '/' && c == '*') {
+						this.closed = false;
+					}
+					else {
+						this.prev_c = c;
+						return false;
+					}
+				}
 				if (c == '@') {
-					this.prop_key = "";
-					this.prop_value = "";
+					this.prop_key.Length = 0;
+					this.prop_value.Length = 0;
 					this.in_key = true;
 				}
 				else if (c == ' ') {
 					if (this.in_key) {
+						this.in_key = false;
 						this.in_value = true;
 					}
 				}
 				else if (c == '\n' || c == '\r') {
 					if (this.in_value) {
-						this.has_property = true;
+						this.in_value = false;
+						this.in_key = false;
+						this.SetProperties();
 					}
 				}
 				else if (prev_c == '*' && c == '/') {
@@ -75,36 +111,70 @@ namespace NyanPass {
 				}
 
 				if (this.in_key)
-					this.prop_key += c;
-				else this.prop_value += c;
+					this.prop_key.Append(c);
+				else this.prop_value.Append(c);
 
 				this.prev_c = c;
+				if (this.closed)
+					return false;
+				return true;
 			}
 
 			/**
-			 * return the current plugin info property
+			 * set plugin info properties from @props comments
 			 */
-			public KeyValuePair<string, string> GetProperty() {
-				return new KeyValuePair<string,
-					string>(this.prop_key, this.prop_value);
+			private void SetProperties() {
+				switch (this.prop_key.ToString()) {
+
+					case "name":
+						this.plugin_info.name = 
+							this.prop_value.ToString();
+						break;
+
+					case "author":
+						this.plugin_info.author =
+							this.prop_value.ToString();
+						break;
+
+					case "description":
+					case "desc":
+						this.plugin_info.description =
+							this.prop_value.ToString();
+						break;
+
+					case "version":
+						this.plugin_info.version =
+							this.prop_value.ToString();
+						break;
+
+					case "url":
+						this.plugin_info.version =
+							this.prop_value.ToString();
+						break;
+
+					default: break;
+				}
+
 			}
-			
+
 		}
 
 		/**
 		 * multiline comment state parser object
 		 */
-		private MultilineComment multi_comment_p = null;
+		private MultilineCommentParser comments_parser;
 		
 		/**
 		 * parsed plugin info data - error if not included
 		 */
-		private PluginInfo plugin_info = new PluginInfo();
+		private PluginInfo plugin_info;
 
 		/**
 		 * parse out the given file
 		 */
 		public Parser(string input_file) {
+			this.comments_parser = new MultilineCommentParser(this.plugin_info);
+			this.plugin_info = new PluginInfo();
 			this.ReadFile(input_file);
 		}
 
@@ -125,60 +195,13 @@ namespace NyanPass {
 		 * parse the ordered loc from a call to ReadFile
 		 */
 		private void ParseLine(string line) {
-			
-			string buf = "";
 
-			foreach (char c in line) {
-
-				if (this.multi_comment_p != null &&
-					!this.multi_comment_p.closed) {
-
-					this.multi_comment_p.ParseChar(c);
-					if (this.multi_comment_p.has_property) {
-						KeyValuePair<string,
-							string> kvp =
-								this.multi_comment_p.GetProperty();
-
-						Util.LogMessage(kvp.ToString());
-
-						switch (kvp.Key) {
-
-							case "name":
-								this.plugin_info.name = kvp.Value;
-								break;
-
-							case "author":
-								this.plugin_info.author = kvp.Value;
-								break;
-
-							case "description":
-							case "desc":
-								this.plugin_info.description = kvp.Value;
-								break;
-
-							case "version":
-								this.plugin_info.version = kvp.Value;
-								break;
-
-							case "url":
-								this.plugin_info.url = kvp.Value;
-								break;
-
-							default: break;
-						}
-					}
-
-					continue;
-				}
+			for (int i = 0; i < line.Length; i++) {
 
 				/**
-				 * parse unknown
+				 * handled by the multi-line comment parser?
 				 */
-				buf += c;
-				if (buf == "/*") {
-					this.multi_comment_p = new MultilineComment();
-				}
-
+				if (this.comments_parser.ShouldConsume(line, i, line[i]));
 			}
 
 		}
