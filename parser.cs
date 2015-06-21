@@ -35,7 +35,7 @@ namespace NyanPass {
 			 * the shortest time whether it's needed to parse further
 			 * return true to indicate that other parsers need not be called
 			 */
-			bool ShouldConsume(string line, int i, char c);
+			bool ShouldConsume(string line, int i, char c, int len);
 		}
 
 		/**
@@ -78,7 +78,8 @@ namespace NyanPass {
 			 * parser for multi-line comments
 			 * return true when in a multiline comments
 			 */
-			public bool ShouldConsume(string line, int i, char c) {
+			public bool ShouldConsume(string line, int i,
+				char c, int len) {
 				if (this.closed) {
 					if (this.prev_c == '/' && c == '*') {
 						this.closed = false;
@@ -99,20 +100,23 @@ namespace NyanPass {
 						this.in_value = true;
 					}
 				}
-				else if (c == '\n' || c == '\r') {
+				else if (this.prev_c == '*' && c == '/') {
+					this.closed = true;
+				}
+				else if (i == len) {
+					this.prev_c = '\0';
 					if (this.in_value) {
 						this.in_value = false;
 						this.in_key = false;
+						this.prop_value.Append(c);
 						this.SetProperties();
 					}
-				}
-				else if (prev_c == '*' && c == '/') {
-					this.closed = true;
 				}
 
 				if (this.in_key)
 					this.prop_key.Append(c);
-				else this.prop_value.Append(c);
+				else if (this.in_value)
+					this.prop_value.Append(c);
 
 				this.prev_c = c;
 				if (this.closed)
@@ -196,12 +200,13 @@ namespace NyanPass {
 		 */
 		private void ParseLine(string line) {
 
-			for (int i = 0; i < line.Length; i++) {
+			int len = line.Length;
+			for (int i = 0; i < len; i++) {
 
 				/**
 				 * handled by the multi-line comment parser?
 				 */
-				if (this.comments_parser.ShouldConsume(line, i, line[i]));
+				if (this.comments_parser.ShouldConsume(line, i, line[i], len - 1));
 			}
 
 		}
